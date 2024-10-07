@@ -12,6 +12,9 @@ namespace Group
   def isNorm {G : Group T} (H : Subgroup G) : Prop :=
     ∀ (g : T) (h : T), h ∈ H.carrier → g * h * inv g ∈ H.carrier
 
+  structure NormalSubgroup (G : Group T) extends Subgroup G where
+    norm : isNorm this
+
   theorem conjugation_is_norm {G : Group T} {H : Subgroup G} (norm : isNorm H) :
     ∀ (g x : T), g * x * inv g ∈ H.carrier → x ∈ H.carrier := by
     intro g x
@@ -145,6 +148,7 @@ namespace Group
     }
 
     def rce_quotient (H: Subgroup G) := Quotient (rce_setoid H)
+    def rce_quotient_mk (H : Subgroup G) := Quotient.mk (rce_setoid H)
   end right_coset_equivalence_proof
 
   /-- Subgroup is normal iff left cosets the same as right cosets -/
@@ -169,19 +173,79 @@ namespace Group
       simp only [inv_of_inv, ← mul_assoc, inv_mul, one_mul]
       exact h_in_H
 
+  theorem subgroup_normal_iff_setoids_same {G : Group T} {H : Subgroup G} :
+    isNorm H ↔ lce_setoid H = rce_setoid H := by
+    rw [lce_setoid, rce_setoid]
+    constructor
+    . intro norm
+      have h2 := subgroup_normal_iff_cosets_eq.mp norm
+      congr
+    . intro setoids_eq
+      injection setoids_eq with r_eq
+      have h2 := subgroup_normal_iff_cosets_eq.mpr r_eq
+      congr
+
+  def rce_to_lce {G : Group T} {H : NormalSubgroup G}
+    (q : rce_quotient H.toSubgroup) : lce_quotient H.toSubgroup :=
+    have h : rce_quotient H.toSubgroup = lce_quotient H.toSubgroup := by
+      rw [lce_quotient, rce_quotient]
+      rw [subgroup_normal_iff_setoids_same.mp H.norm]
+    cast h q
+
+  def lce_to_rce {G : Group T} {H : NormalSubgroup G}
+    (q : lce_quotient H.toSubgroup) : rce_quotient H.toSubgroup :=
+    have h : lce_quotient H.toSubgroup = rce_quotient H.toSubgroup := by
+      rw [lce_quotient, rce_quotient]
+      rw [subgroup_normal_iff_setoids_same.mp H.norm]
+    cast h q
+
+  def coset_equivalence {G : Group T} (H : NormalSubgroup G) (a b : T) : Prop :=
+    a * inv b ∈ H.carrier ∨ inv b * a ∈ H.carrier
+
+  theorem in_both_cosets {G : Group T} (H : NormalSubgroup G) :
+    ∀ (a b : T), coset_equivalence H a b ↔ a * inv b ∈ H.carrier ∧ inv b * a ∈ H.carrier := by
+    intro a b
+    have norm := H.norm (Group T) G
+
+
+  section coset_equivalence
+    variable {G : Group T}
+
+    theorem ce_refl (H : NormalSubgroup G) :
+      ∀ (x : T), coset_equivalence H x x := by
+      intro x
+      rw [coset_equivalence]
+      rw [mul_inv]
+      left
+      exact H.one_mem
+
+    theorem ce_symm (H : NormalSubgroup G) :
+      ∀ {a b : T}, coset_equivalence H a b → coset_equivalence H b a := by
+      intro a b
+      intro a_eq_b
+      repeat rw [coset_equivalence] at *
+      have h := H.inv_mem (a * inv b) a_eq_b
+      rw [inv_of_product] at h
+      rw [inv_of_inv] at h
+      left
+      exact h
+  end coset_equivalence
+
   section quotients
     variable {G : Group T}
 
-    instance lce_quotient_mul (H : Subgroup G) (norm : isNorm H) : Mul (lce_quotient H) := {
+    -- theorem mul_respects_equiv :
+
+    instance lce_quotient_mul (H : NormalSubgroup G) : Mul (lce_quotient H.toSubgroup) := {
       mul := fun a b =>
-        Quotient.liftOn₂ a b (fun x y => lce_quotient_mk H (x * y))
+        Quotient.liftOn₂ a b (fun x y => lce_quotient_mk H.toSubgroup (x * y))
         (fun a1 a2 b1 b2 h1 h2 => by
+          have norm : isNorm H.toSubgroup := H.norm
           have h22 : inv b2 * a2 ∈ H.carrier := by
             exact h2
           have h3 : (inv b1 * a1) * (inv b2 * a2) ∈ H.carrier :=
             H.mul_mem (inv b1 * a1) (inv b2 * a2) h1 h2
           simp only [← mul_assoc] at h3
-          rw [lce_quotient_mk]
           dsimp
           have t : inv (b1 * b2) * (a1 * a2) ∈ H.carrier := by
             simp only [mul_assoc, inv_of_product]
@@ -193,9 +257,29 @@ namespace Group
             exact h22
             exact norm
             exact norm
+          rw [lce_quotient_mk]
           rw [Quotient.sound]
           exact t
         )
+    }
+
+    theorem lce_quotient_mul_id (H : NormalSubgroup G) (a b : T) :
+      lce_quotient_mk H.toSubgroup (a * b) = (lce_quotient_mk H.toSubgroup a) * (lce_quotient_mk H.toSubgroup b) := by
+
+
+    instance rce_quotient_mul (H : NormalSubgroup G) : Mul (rce_quotient H.toSubgroup) := {
+      mul := fun a b => lce_to_rce ((rce_to_lce  a) * (rce_to_lce b))
+    }
+
+    instance lce_quotient_group (H : NormalSubgroup G) : Group (lce_quotient H.toSubgroup) := {
+      mul_assoc := fun a b c => by
+        have a_ex := a.exists_rep
+        have a' := a_ex.choose_spec
+        have b_ex := b.exists_rep
+        have b' := b_ex.choose_spec
+        have c_ex := c.exists_rep
+        have c' := c_ex.choose_spec
+        have bc := Quotient.mk (lce_setoid H.toSubgroup) (b_ex.choose * c_ex.choose)
     }
   end quotients
 end Group
