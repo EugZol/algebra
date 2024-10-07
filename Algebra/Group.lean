@@ -19,23 +19,17 @@ namespace Group
     variable [G : Group T]
     variable (g : T)
 
-    @[simp low] theorem mul_assoc_simp (g k l : T) : g * (k * l) = g * k * l := (mul_assoc g k l).symm
-    @[simp high] theorem one_eq_one_simp : (1 : T) = one := rfl
-    @[simp high] theorem one_mul_simp : one * g = g := one_mul g
-    @[simp high] theorem mul_one_simp : g * one = g := mul_one g
-    @[simp high] theorem inv_mul_simp : inv g * g = one := inv_mul g
-
     /-- Association of four elements -/
     theorem mul_assoc_4 (a b c d : T) : a * b * c * d = a * b * (c * d) := by
       exact mul_assoc (a * b) c d
 
     /-- Inverse of one is one -/
-    @[simp high] theorem inv_one_eq_one : inv G.one = G.one := by
+    theorem inv_one_eq_one : inv G.one = G.one := by
       rw [← mul_one (inv one)]
       exact inv_mul one
 
     /-- Inverse of the inverse of g is g -/
-    @[simp high] theorem inv_of_inv : inv (inv g) = g := by
+    theorem inv_of_inv : inv (inv g) = g := by
       have h : inv (inv g) * inv g = one := by
         apply inv_mul
       have h1 : inv (inv g) * inv g * g = one * g := by
@@ -47,7 +41,7 @@ namespace Group
       exact one_mul g
 
     /-- Product of inverses is one -/
-    @[simp high] theorem mul_inv : g * inv g = one := by
+    theorem mul_inv : g * inv g = one := by
       nth_rewrite 1 [← inv_of_inv g]
       apply inv_mul (inv g)
 
@@ -66,55 +60,55 @@ namespace Group
     theorem inv_symm (g k : T) : inv g = k → inv k = g := by
       intro h
       rw [inv_congr]
-      simp
+      rw [inv_of_inv]
       exact h.symm
 
     /-- Cancel right operand of multiplication equality -/
-    @[simp low] theorem mul_right_cancel (a b c : T) : a * c = b * c ↔ a = b := by
+    theorem mul_right_cancel (a b c : T) : a * c = b * c ↔ a = b := by
       apply Iff.intro
       intro there
       have h1 : a * c * inv c = b * c * inv c := by
         exact congrFun (congrArg HMul.hMul there) (inv c)
       rw [mul_assoc] at h1
       rw [mul_assoc] at h1
-      simp at h1
+      simp only [mul_inv, mul_one] at h1
       exact h1
       intro back
       exact congrFun (congrArg HMul.hMul back) c
 
     /-- Cancel left operand of multiplication equality -/
-    @[simp low] theorem mul_left_cancel (a b c : T) : c * a = c * b ↔ a = b := by
+    theorem mul_left_cancel (a b c : T) : c * a = c * b ↔ a = b := by
       apply Iff.intro
       intro there
       have h1 : inv c * (c * a) = inv c * (c * b) := by
         exact congrArg (HMul.hMul (inv c)) there
       rw [← mul_assoc] at h1
       rw [← mul_assoc] at h1
-      simp at h1
+      simp only [inv_mul, one_mul] at h1
       exact h1
       intro back
       exact congrArg (HMul.hMul c) back
 
     /-- Any left one is the one -/
-    @[simp high] theorem single_one_left (alt_one : T) : alt_one * g = g → alt_one = one := by
+    theorem single_one_left (alt_one : T) : alt_one * g = g → alt_one = one := by
       intro h
       nth_rewrite 2 [← one_mul g] at h
       rw [mul_right_cancel] at h
       exact h
 
     /-- Any right one is the one -/
-    @[simp high] theorem single_one_right (alt_one : T) : g * alt_one = g → alt_one = one := by
+    theorem single_one_right (alt_one : T) : g * alt_one = g → alt_one = one := by
       intro h
       nth_rewrite 2 [← mul_one g] at h
       rw [mul_left_cancel] at h
       exact h
 
-    @[simp high] theorem single_one_same_squared (alt_one : T) : alt_one * alt_one = alt_one → alt_one = one := by
+    theorem single_one_same_squared (alt_one : T) : alt_one * alt_one = alt_one → alt_one = one := by
       intro h
       exact single_one_right alt_one alt_one h
 
     /-- Inverse of product: (g * k)⁻¹ = k⁻¹ * g⁻¹ -/
-    @[simp high] theorem inv_of_product (g k : T) : inv (g * k) = inv k * inv g := by
+    theorem inv_of_product (g k : T) : inv (g * k) = inv k * inv g := by
       refine inv_symm (inv k * inv g) (g * k) ?_
       symm
       rw [← mul_right_cancel (g * k) (inv (inv k * inv g)) (inv k * inv g)]
@@ -171,7 +165,7 @@ namespace Group
       have h := hom.hom
       rw [isHom] at h
       have h2 := h one one
-      simp at h2
+      simp only [one_mul] at h2
       have h3 := single_one_same_squared (hom.f one) h2.symm
       exact h3
 
