@@ -26,6 +26,7 @@ namespace Group
     simp only [inv_mul, mul_one] at h
     exact h
 
+  /-- For a normal subgroup, a * b ∈ H ↔ b * a ∈ H -/
   theorem comm_of_norm {G : Group T} {H : Subgroup G} (norm : isNorm H) :
     ∀ (a b : T), (a * b ∈ H.carrier) = (b * a ∈ H.carrier) := by
     have t : ∀ (a b : T), a * b ∈ H.carrier → b * a ∈ H.carrier := by
@@ -79,11 +80,19 @@ namespace Group
       rw [mul_one] at h
       exact h
 
-    def lce_struct (H : Subgroup G) : Equivalence (left_coset_equivalence H) := {
+    def lce_eq_struct (H : Subgroup G) : Equivalence (left_coset_equivalence H) := {
       refl := lce_refl H,
       symm := lce_symm H,
       trans := lce_trans H
     }
+
+    def lce_setoid (H : Subgroup G) : Setoid T := {
+      r := left_coset_equivalence H,
+      iseqv := lce_eq_struct H
+    }
+
+    def lce_quotient (H: Subgroup G) := Quotient (lce_setoid H)
+    def lce_quotient_mk (H : Subgroup G) := Quotient.mk (lce_setoid H)
   end left_coset_equivalence_proof
 
   /-- Equivalence class b ∈ Ha -/
@@ -124,11 +133,18 @@ namespace Group
       rw [mul_one] at h
       exact h
 
-    def rce_struct (H : Subgroup G) : Equivalence (right_coset_equivalence H) := {
+    def rce_eq_struct (H : Subgroup G) : Equivalence (right_coset_equivalence H) := {
       refl := rce_refl H,
       symm := rce_symm H,
       trans := rce_trans H
     }
+
+    def rce_setoid (H : Subgroup G) : Setoid T := {
+      r := right_coset_equivalence H,
+      iseqv := rce_eq_struct H
+    }
+
+    def rce_quotient (H: Subgroup G) := Quotient (rce_setoid H)
   end right_coset_equivalence_proof
 
   /-- Subgroup is normal iff left cosets the same as right cosets -/
@@ -148,11 +164,38 @@ namespace Group
       have eq : ∀ (a b : T), left_coset_equivalence H a b = right_coset_equivalence H a b := by
         exact fun a b ↦ congrFun (congrFun eq a) b
       simp only [left_coset_equivalence, right_coset_equivalence] at eq
-      have h2 : inv g * (g * h) ∈ H.carrier := by
-        simp only [← mul_assoc, inv_mul, one_mul]
-        exact h_in_H
       rw [← inv_of_inv (g * h)]
       rw [eq]
       simp only [inv_of_inv, ← mul_assoc, inv_mul, one_mul]
       exact h_in_H
+
+  section quotients
+    variable {G : Group T}
+
+    instance lce_quotient_mul (H : Subgroup G) (norm : isNorm H) : Mul (lce_quotient H) := {
+      mul := fun a b =>
+        Quotient.liftOn₂ a b (fun x y => lce_quotient_mk H (x * y))
+        (fun a1 a2 b1 b2 h1 h2 => by
+          have h22 : inv b2 * a2 ∈ H.carrier := by
+            exact h2
+          have h3 : (inv b1 * a1) * (inv b2 * a2) ∈ H.carrier :=
+            H.mul_mem (inv b1 * a1) (inv b2 * a2) h1 h2
+          simp only [← mul_assoc] at h3
+          rw [lce_quotient_mk]
+          dsimp
+          have t : inv (b1 * b2) * (a1 * a2) ∈ H.carrier := by
+            simp only [mul_assoc, inv_of_product]
+            rw [comm_of_norm]
+            rw [← mul_assoc]
+            rw [mul_assoc_4]
+            refine H.mul_mem (inv b1 * a1) (a2 * inv b2) h1 ?_
+            rw [comm_of_norm] at h22
+            exact h22
+            exact norm
+            exact norm
+          rw [Quotient.sound]
+          exact t
+        )
+    }
+  end quotients
 end Group

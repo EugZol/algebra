@@ -25,6 +25,10 @@ namespace Group
     @[simp high] theorem mul_one_simp : g * one = g := mul_one g
     @[simp high] theorem inv_mul_simp : inv g * g = one := inv_mul g
 
+    /-- Association of four elements -/
+    theorem mul_assoc_4 (a b c d : T) : a * b * c * d = a * b * (c * d) := by
+      exact mul_assoc (a * b) c d
+
     /-- Inverse of one is one -/
     @[simp high] theorem inv_one_eq_one : inv G.one = G.one := by
       rw [← mul_one (inv one)]
@@ -145,7 +149,7 @@ namespace Group
   section Homomorphism
     variable {T₁ T₂ : Type}
 
-    def isHom [_G₁ : Group T₁] [_G₂ : Group T₂] (f : T₁ → T₂) : Prop :=
+    def isHom [Group T₁] [Group T₂] (f : T₁ → T₂) : Prop :=
       ∀g₁ g₂ : T₁, f (g₁ * g₂) = f g₁ * f g₂
 
     structure Hom (G₁ : Group T₁) (G₂ : Group T₂) where
@@ -226,5 +230,24 @@ namespace Group
           exact mul_of_inv_eq_one_right g₁ (inv g₂) h2
         rw [inv_of_inv] at h3
         exact h3
+
+    def isIsom {G₁ : Group T₁} {G₂ : Group T₂}
+      (hom : Hom G₁ G₂) (inv : Hom G₂ G₁) : Prop :=
+      (∀ (g₁ : T₁), inv.f (hom.f g₁) = g₁) ∧
+        (∀ (g₂ : T₂), hom.f (inv.f g₂) = g₂)
+
+    def idHom (G : Group T) : Hom G G := {
+      f := id,
+      hom := fun _ _ ↦ rfl
+    }
+
+    theorem id_is_isom {G : Group T} : isIsom (idHom G) (idHom G) := by
+      rw [isIsom]
+      constructor
+      . intro g
+        rfl
+      . intro g
+        rfl
+
   end Homomorphism
 end Group
